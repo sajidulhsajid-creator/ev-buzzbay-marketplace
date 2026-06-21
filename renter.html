@@ -45,13 +45,16 @@
       background-attachment: fixed;
       pointer-events: none;
       z-index: 0;
+      /* Fade out the bottom of the image so it doesn't end abruptly */
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 95%);
+      mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 95%);
     }
     
     /* Mobile: disable parallax (causes performance issues on iOS) */
     @media (max-width: 768px) {
       body::before {
         background-attachment: scroll;
-        background-position: center 60px;
+        background-position: center top;
       }
     }
     
@@ -62,7 +65,8 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(180deg, rgba(26, 26, 46, 0.25) 0%, rgba(26, 26, 46, 0.55) 100%);
+      /* Just a very subtle top vignette for text contrast — keep backdrop sharp */
+      background: linear-gradient(180deg, rgba(26, 26, 46, 0.15) 0%, rgba(26, 26, 46, 0) 30%);
       pointer-events: none;
       z-index: 1;
     }
@@ -835,11 +839,11 @@
     <div class="search-section">
       <div class="search-grid">
         <div class="search-group">
-          <label>📍 Search Location</label>
+          <label>Location</label>
           <input type="text" id="search" placeholder="City, suburb, or address..." onkeypress="if(event.key==='Enter') filterChargers()">
         </div>
         <div class="search-group">
-          <label>🚗 Select Vehicle</label>
+          <label>Vehicle</label>
           <select id="car-select">
             <option value="tesla_m3">Tesla Model 3 (65 kWh)</option>
             <option value="ev_small">Small EV (40 kWh)</option>
@@ -847,7 +851,7 @@
           </select>
         </div>
         <div class="search-group">
-          <label>🔌 Status</label>
+          <label>Status</label>
           <select id="status-filter">
             <option value="">All Chargers</option>
             <option value="available">Available</option>
@@ -857,7 +861,7 @@
         <button class="btn-search" onclick="filterChargers()">Search</button>
       </div>
       <div class="location-buttons">
-        <button class="btn-location" onclick="useMyLocation()">📍 Use My Location</button>
+        <button class="btn-location" onclick="useMyLocation()">Use My Location</button>
       </div>
     </div>
 
@@ -1133,7 +1137,7 @@
                 <div class="popup-stat">
                   <div class="popup-label">Status</div>
                   <div class="popup-value" style="color: ${isOnline ? '#4CAF50' : '#e94560'};">
-                    ${isOnline ? '✓ Online' : '✕ Offline'}
+                    ${isOnline ? 'Online' : 'Offline'}
                   </div>
                 </div>
               </div>
@@ -1239,7 +1243,7 @@
           <div class="charger-location">${charger.description}</div>
           
           <span class="status-badge ${isOnline ? (isCharging ? 'status-charging' : 'status-online') : 'status-offline'}">
-            ${isCharging ? '⚡ Charging' : (isOnline ? '✓ Available' : '✕ Offline')}
+            ${isCharging ? 'Charging' : (isOnline ? 'Available' : 'Offline')}
           </span>
           
           ${statsHtml}
@@ -1262,7 +1266,7 @@
           
           ${userLocation && distance && drivingTime ? `
             <button onclick="showRoute({lat: ${charger.lat}, lng: ${charger.lng}}); event.stopPropagation();" class="btn-navigate">
-              🗺️ Route (${distance.toFixed(1)}km • ${drivingTime}min)
+              Route (${distance.toFixed(1)}km • ${drivingTime}min)
             </button>
             <div class="distance-info">Driving: ${drivingTime}min</div>
           ` : ''}
@@ -1363,7 +1367,7 @@
           <div class="charger-location">${charger.description}</div>
           
           <span class="status-badge ${isOnline ? (isCharging ? 'status-charging' : 'status-online') : 'status-offline'}">
-            ${isCharging ? '⚡ Charging' : (isOnline ? '✓ Available' : '✕ Offline')}
+            ${isCharging ? 'Charging' : (isOnline ? 'Available' : 'Offline')}
           </span>
           
           ${statsHtml}
@@ -1386,7 +1390,7 @@
           
           ${userLocation && distance && drivingTime ? `
             <button onclick="showRoute({lat: ${charger.lat}, lng: ${charger.lng}}); event.stopPropagation();" class="btn-navigate">
-              🗺️ Route (${distance.toFixed(1)}km • ${drivingTime}min)
+              Route (${distance.toFixed(1)}km • ${drivingTime}min)
             </button>
             <div class="distance-info">Driving: ${drivingTime}min</div>
           ` : ''}
