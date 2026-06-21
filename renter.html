@@ -24,7 +24,7 @@
     
     body {
       font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      background: var(--primary);
       color: var(--text);
       min-height: 100vh;
       position: relative;
@@ -38,11 +38,42 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: 
-        radial-gradient(circle at 20% 50%, rgba(233, 69, 96, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(15, 52, 96, 0.1) 0%, transparent 50%);
+      background-image: url('./buzzbay_backdrop.png');
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
       pointer-events: none;
       z-index: 0;
+      opacity: 0.85;
+    }
+    
+    /* Mobile: disable parallax (causes performance issues on iOS) */
+    @media (max-width: 768px) {
+      body::before {
+        background-attachment: scroll;
+        background-position: center 60px;
+      }
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        linear-gradient(180deg, rgba(26, 26, 46, 0.4) 0%, rgba(26, 26, 46, 0.85) 60%, rgba(26, 26, 46, 0.98) 100%),
+        radial-gradient(circle at 20% 50%, rgba(233, 69, 96, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(15, 52, 96, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    .container, .nav-bar {
+      position: relative;
+      z-index: 2;
     }
     
     .nav-bar {
@@ -138,6 +169,81 @@
     
     @media (max-width: 1024px) {
       .search-grid { grid-template-columns: 1fr; }
+    }
+    
+    /* ====== TABLET (max 768px) ====== */
+    @media (max-width: 768px) {
+      .nav-bar { padding: 12px 16px; }
+      .logo img { height: 32px; }
+      .logo-text { font-size: 14px; }
+      .nav-links { gap: 16px; }
+      .nav-links a { font-size: 13px; }
+      
+      .container {
+        padding: 20px 16px;
+        margin-top: 60px;
+      }
+      
+      .header { margin-bottom: 30px; }
+      .header h1 { font-size: 32px; }
+      
+      .search-section {
+        padding: 20px;
+        margin-bottom: 24px;
+        border-radius: 12px;
+      }
+      
+      #map { height: 400px; border-radius: 12px; }
+      
+      .charger-panel {
+        max-height: none;
+        border-radius: 12px;
+      }
+      
+      .modal-content {
+        margin: 5% auto;
+        padding: 24px 20px;
+        width: 95%;
+        max-height: 90vh;
+        border-radius: 12px;
+      }
+    }
+    
+    /* ====== MOBILE (max 480px) ====== */
+    @media (max-width: 480px) {
+      .nav-bar { padding: 10px 12px; }
+      .logo img { height: 28px; }
+      .logo-text { display: none; } /* hide text, keep logo */
+      .nav-links { gap: 10px; }
+      .nav-links a { font-size: 12px; }
+      
+      .container {
+        padding: 16px 12px;
+        margin-top: 56px;
+      }
+      
+      .header h1 { font-size: 26px; }
+      
+      .search-section { padding: 16px; }
+      .search-group label { font-size: 11px; }
+      .search-group input, .search-group select {
+        padding: 12px;
+        font-size: 14px;
+      }
+      
+      #map { height: 320px; }
+      
+      .modal-content { padding: 20px 16px; margin: 4% auto; }
+      
+      .estimate-box { padding: 14px; }
+      .estimate-row { font-size: 13px; }
+    }
+    
+    /* Touch targets for mobile - ensure buttons are tap-friendly */
+    @media (hover: none) and (pointer: coarse) {
+      button, .btn-search, .btn-navigate, .popup-button {
+        min-height: 44px;
+      }
     }
     
     .search-group {
@@ -815,7 +921,7 @@
       <div class="estimate-box">
         <div class="estimate-row">
           <span class="estimate-label">Charging Time</span>
-          <span class="estimate-value"><span id="charging-time">--</span> min</span>
+          <span class="estimate-value"><span id="charging-time">--</span></span>
         </div>
         <div class="estimate-row">
           <span class="estimate-label">Estimated Cost</span>
@@ -889,9 +995,41 @@
       const carType = document.getElementById('car-select').value;
       const targetSOC = parseInt(document.getElementById('target-soc').value) || 80;
       const car = carProfiles[carType];
-      const energyNeeded = (car.capacity * (targetSOC - car.defaultSOC)) / 100;
-      const chargingTime = Math.round((energyNeeded / chargerPower) * 60);
-      return chargingTime;
+      const currentSOC = car.defaultSOC;
+      
+      // Charging efficiency (AC chargers ~88-92%, accounts for heat & conversion losses)
+      const efficiency = 0.90;
+      const effectivePower = chargerPower * efficiency;
+      
+      // Account for charging curve: 0-80% is fast, 80-100% slows down significantly
+      // After 80%, charging rate drops to ~40% to protect battery
+      let totalMinutes = 0;
+      
+      if (targetSOC <= 80) {
+        // Fast charging phase only
+        const energyNeeded = (car.capacity * (targetSOC - currentSOC)) / 100;
+        totalMinutes = (energyNeeded / effectivePower) * 60;
+      } else {
+        // Fast phase: currentSOC -> 80%
+        const fastEnergy = (car.capacity * (80 - currentSOC)) / 100;
+        const fastMinutes = (fastEnergy / effectivePower) * 60;
+        
+        // Slow phase: 80% -> targetSOC (40% of normal speed)
+        const slowEnergy = (car.capacity * (targetSOC - 80)) / 100;
+        const slowMinutes = (slowEnergy / (effectivePower * 0.4)) * 60;
+        
+        totalMinutes = fastMinutes + slowMinutes;
+      }
+      
+      return Math.round(totalMinutes);
+    }
+    
+    function formatChargingTime(minutes) {
+      if (minutes < 60) return minutes + ' min';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      if (mins === 0) return hours + 'h';
+      return hours + 'h ' + mins + 'm';
     }
 
     function calculateDistance(lat1, lng1, lat2, lng2) {
@@ -985,7 +1123,7 @@
 
               <div class="popup-charging-box">
                 <div class="popup-charging-label">Estimated Charge Time to 80%</div>
-                <div class="popup-charging-value">${chargingTime} min</div>
+                <div class="popup-charging-value">${formatChargingTime(chargingTime)}</div>
               </div>
 
               <div class="popup-stats-grid">
@@ -1036,7 +1174,7 @@
           html: `
             <div style="position: relative; width: 50px; height: 50px;">
               <div style="background: ${isOnline ? '#4CAF50' : '#e94560'}; color: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid white;">⚡</div>
-              <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; pointer-events: none;">Estimated: ${chargingTime}min</div>
+              <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; pointer-events: none;">~ ${formatChargingTime(chargingTime)}</div>
             </div>
           `,
           iconSize: [50, 50],
@@ -1146,7 +1284,7 @@
             box.classList.remove('loading');
             box.innerHTML = `
               <div class="label">Estimated Charge Time to 80%</div>
-              <div class="value">${chargingTime} min</div>
+              <div class="value">${formatChargingTime(chargingTime)}</div>
             `;
           }
         }, 1500);
@@ -1270,7 +1408,7 @@
             box.classList.remove('loading');
             box.innerHTML = `
               <div class="label">Estimated Charge Time to 80%</div>
-              <div class="value">${chargingTime} min</div>
+              <div class="value">${formatChargingTime(chargingTime)}</div>
             `;
           }
         }, 1500);
@@ -1306,11 +1444,27 @@
       if (!selectedCharger || isNaN(startTime) || isNaN(endTime)) return;
       
       const car = carProfiles[carType];
-      const energyNeeded = (car.capacity * (targetSOC - car.defaultSOC)) / 100;
-      const chargingTime = Math.round((energyNeeded / selectedCharger.power) * 60);
+      const currentSOC = car.defaultSOC;
+      const efficiency = 0.90;
+      const effectivePower = selectedCharger.power * efficiency;
+      const energyNeeded = (car.capacity * (targetSOC - currentSOC)) / 100;
+      
+      // Realistic charging time with 80% rule
+      let chargingTime = 0;
+      if (targetSOC <= 80) {
+        chargingTime = (energyNeeded / effectivePower) * 60;
+      } else {
+        const fastEnergy = (car.capacity * (80 - currentSOC)) / 100;
+        const fastMinutes = (fastEnergy / effectivePower) * 60;
+        const slowEnergy = (car.capacity * (targetSOC - 80)) / 100;
+        const slowMinutes = (slowEnergy / (effectivePower * 0.4)) * 60;
+        chargingTime = fastMinutes + slowMinutes;
+      }
+      chargingTime = Math.round(chargingTime);
+      
       const cost = (energyNeeded * BASE_RATE).toFixed(2);
       
-      document.getElementById('charging-time').textContent = chargingTime;
+      document.getElementById('charging-time').textContent = formatChargingTime(chargingTime);
       document.getElementById('estimated-cost').textContent = '$' + cost;
     }
 
