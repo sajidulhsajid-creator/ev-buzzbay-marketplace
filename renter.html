@@ -45,7 +45,6 @@
       background-attachment: fixed;
       pointer-events: none;
       z-index: 0;
-      opacity: 0.85;
     }
     
     /* Mobile: disable parallax (causes performance issues on iOS) */
@@ -63,10 +62,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: 
-        linear-gradient(180deg, rgba(26, 26, 46, 0.4) 0%, rgba(26, 26, 46, 0.85) 60%, rgba(26, 26, 46, 0.98) 100%),
-        radial-gradient(circle at 20% 50%, rgba(233, 69, 96, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(15, 52, 96, 0.08) 0%, transparent 50%);
+      background: linear-gradient(180deg, rgba(26, 26, 46, 0.25) 0%, rgba(26, 26, 46, 0.55) 100%);
       pointer-events: none;
       z-index: 1;
     }
@@ -150,7 +146,7 @@
     }
     
     .search-section {
-      background: rgba(26, 26, 46, 0.8);
+      background: rgba(26, 26, 46, 0.92);
       backdrop-filter: blur(20px);
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -341,7 +337,7 @@
     }
     
     .charger-panel {
-      background: rgba(26, 26, 46, 0.8);
+      background: rgba(26, 26, 46, 0.92);
       backdrop-filter: blur(20px);
       border: 1px solid var(--border);
       border-radius: 16px;
@@ -825,11 +821,6 @@
   <div class="nav-bar">
     <div class="logo">
       <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HoAFhAJ/wlseKgAAAABJRU5ErkJggg==" alt="BuzzBay" id="buzzbay-logo">
-    </div>
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="#profile">Profile</a>
-      <a href="#logout">Logout</a>
     </div>
   </div>
 
