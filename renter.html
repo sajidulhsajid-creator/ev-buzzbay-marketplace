@@ -830,7 +830,7 @@
   </div>
 
   <script>
-    const API_URL = 'http://localhost:3001/api';
+    const API_URL = 'https://ev-buzzbay-backend-production.up.railway.app/api';
     let chargers = [];
     let selectedCharger = null;
     let map = null;
@@ -906,7 +906,7 @@
     }
 
     function calculateDrivingTime(distanceKm) {
-      const avgSpeed = 50; // km/h average speed
+      const avgSpeed = 50;
       const timeMinutes = Math.round((distanceKm / avgSpeed) * 60);
       return timeMinutes;
     }
@@ -914,12 +914,10 @@
     function showRoute(charger) {
       if (!userLocation) return;
 
-      // Clear existing route
       if (routingControl) {
         map.removeControl(routingControl);
       }
 
-      // Create new route
       routingControl = L.Routing.control({
         waypoints: [
           L.latLng(userLocation.lat, userLocation.lng),
@@ -933,7 +931,6 @@
         createMarker: () => null
       }).addTo(map);
 
-      // Fit bounds
       const group = new L.featureGroup([
         L.latLng(userLocation.lat, userLocation.lng),
         L.latLng(charger.lat, charger.lng)
@@ -976,7 +973,6 @@
         const isOnline = state.status === 'online';
         const chargingTime = calculateChargingTime(charger.maxPower);
         
-        // Build popup HTML with beautiful styling
         const popupHtml = `
           <div style="width: 280px; background: transparent; border: none; padding: 0;">
             <div class="popup-header">
@@ -1387,7 +1383,6 @@
     loadChargers();
     setInterval(loadChargers, 5000);
 
-    // Load logo
     document.addEventListener('DOMContentLoaded', () => {
       const logoImg = document.getElementById('buzzbay-logo');
       if (logoImg) {
