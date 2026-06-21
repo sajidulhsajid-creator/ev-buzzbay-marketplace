@@ -6,7 +6,7 @@ Find and book EV chargers in Australia!
 https://sajidulhsajid-creator.github.io/ev-buzzbay-marketplace/
 
 ## Features
-- Real-time charger availability
+- Real-time charger availability!
 - Live LoRa mesh network data
 - Instant booking
 - Navigation with Google Maps
