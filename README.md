@@ -3,7 +3,7 @@
 Find and book EV chargers in Australia!
 
 ## Live Demo
-https://YOUR-USERNAME.github.io/ev-buzzbay-marketplace/
+https://sajidulhsajid-creator.github.io/ev-buzzbay-marketplace/
 
 ## Features
 - Real-time charger availability
