@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuzzBay - EV Charging Made Easy</title>
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" rel="stylesheet" />
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #1a1a2e;
+      --secondary: #16213e;
+      --accent: #0f3460;
+      --highlight: #e94560;
+      --success: #4CAF50;
+      --text: #eaeaea;
+      --text-dark: #1a1a2e;
+      --border: #2d3561;
+    }
+    
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 50%, rgba(233, 69, 96, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(15, 52, 96, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .nav-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(26, 26, 46, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 15px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      box-shadow: 0 8px 32px rgba(233, 69, 96, 0.1);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 40px;
+    }
+
+    .logo img {
+      height: 40px;
+      width: auto;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #e94560, #ff6b9d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .nav-links { display: flex; gap: 30px; }
+    .nav-links a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+    .nav-links a:hover { color: var(--highlight); }
+    
+    .container {
+      position: relative;
+      z-index: 1;
+      margin-top: 70px;
+      padding: 40px;
+      max-width: 1600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .header {
+      margin-bottom: 60px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text), #b0b0d0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .search-section {
+      background: rgba(26, 26, 46, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin-bottom: 50px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .search-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 30px;
+    }
+    
+    @media (max-width: 1024px) {
+      .search-grid { grid-template-columns: 1fr; }
+    }
+    
+    .search-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .search-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #909090;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    
+    .search-group input,
+    .search-group select {
+      background: rgba(45, 53, 97, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: var(--text);
+      font-size: 14px;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+    
+    .search-group input:focus,
+    .search-group select:focus {
+      outline: none;
+      border-color: var(--highlight);
+      background: rgba(45, 53, 97, 0.8);
+      box-shadow: 0 0 20px rgba(233, 69, 96, 0.2);
+    }
+    
+    .btn-search {
+      background: linear-gradient(135deg, var(--highlight), #ff6b9d);
+      color: white;
+      border: none;
+      padding: 14px 36px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+    
+    .btn-search:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(233, 69, 96, 0.3);
+    }
+    
+    .location-buttons {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .btn-location {
+      background: rgba(15, 52, 96, 0.6);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.3s;
+      flex: 1;
+    }
+    
+    .btn-location:hover {
+      background: var(--accent);
+      border-color: var(--highlight);
+    }
+    
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 40px;
+    }
+    
+    @media (max-width: 1200px) {
+      .main-layout { grid-template-columns: 1fr; }
+    }
+    
+    #map {
+      height: 750px;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    
+    .charger-panel {
+      background: rgba(26, 26, 46, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      max-height: 750px;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .charger-panel::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .charger-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    .charger-panel::-webkit-scrollbar-thumb {
+      background: var(--highlight);
+      border-radius: 4px;
+    }
+    
+    .charger-card {
+      padding: 30px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+    
+    .charger-card:last-child { border-bottom: none; }
+    
+    .charger-card:hover {
+      background: rgba(233, 69, 96, 0.05);
+      padding-left: 40px;
+    }
+    
+    .charger-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    
+    .charger-location {
+      font-size: 12px;
+      color: #909090;
+      margin-bottom: 18px;
+    }
+    
+    .charger-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 18px;
+      font-size: 12px;
+    }
+    
+    .stat {
+      background: rgba(45, 53, 97, 0.4);
+      padding: 12px 14px;
+      border-radius: 8px;
+      border-left: 3px solid var(--highlight);
+    }
+    
+    .stat-label {
+      color: #909090;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    
+    .stat-value {
+      color: var(--highlight);
+      font-weight: 700;
+      font-size: 14px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 20px;
+      margin-bottom: 18px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .status-online {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4CAF50;
+      border: 1px solid #4CAF50;
+    }
+    
+    .status-offline {
+      background: rgba(233, 69, 96, 0.2);
+      color: var(--highlight);
+      border: 1px solid var(--highlight);
+    }
+    
+    .status-charging {
+      background: rgba(33, 150, 243, 0.2);
+      color: #2196F3;
+      border: 1px solid #2196F3;
+    }
+    
+    .charging-time-box {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.25), rgba(76, 175, 80, 0.15));
+      border: 1.5px solid #2196F3;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 18px;
+      text-align: center;
+      position: relative;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    
+    .charging-time-box.loading {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.15), rgba(45, 53, 97, 0.3));
+    }
+    
+    .charging-time-box .label {
+      font-size: 11px;
+      color: #2196F3;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    
+    .charging-time-box .value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #2196F3;
+    }
+    
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(33, 150, 243, 0.3);
+      border-top: 3px solid #2196F3;
+      border-radius: 50%;
+      animation: spin 1.5s linear infinite;
+      margin-right: 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .charger-price {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--highlight);
+      margin-bottom: 18px;
+    }
+    
+    .btn-book {
+      width: 100%;
+      background: linear-gradient(135deg, var(--highlight), #ff6b9d);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    
+    .btn-book:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(233, 69, 96, 0.3);
+    }
+    
+    .btn-book:disabled {
+      background: #505060;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-navigate {
+      width: 100%;
+      background: rgba(33, 150, 243, 0.7);
+      color: white;
+      border: 1px solid #2196F3;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+    
+    .btn-navigate:hover {
+      background: #2196F3;
+      transform: translateY(-2px);
+    }
+    
+    .distance-info {
+      font-size: 12px;
+      color: #909090;
+      text-align: center;
+      margin-top: 8px;
+      padding: 10px;
+      background: rgba(45, 53, 97, 0.3);
+      border-radius: 6px;
+      border-left: 3px solid #2196F3;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-content {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      border: 1px solid var(--border);
+      margin: 10% auto;
+      padding: 40px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+    
+    .close {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--text);
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    
+    .close:hover { color: var(--highlight); }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #909090;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    
+    .input-group input {
+      width: 100%;
+      background: rgba(45, 53, 97, 0.5);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+    
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--highlight);
+      background: rgba(45, 53, 97, 0.8);
+      box-shadow: 0 0 20px rgba(233, 69, 96, 0.2);
+    }
+    
+    .estimate-box {
+      background: rgba(15, 52, 96, 0.6);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .estimate-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    
+    .estimate-row:last-child { margin-bottom: 0; }
+    
+    .estimate-label { color: #909090; }
+    .estimate-value { color: var(--highlight); font-weight: 700; }
+    
+    .success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4CAF50;
+      color: #4CAF50;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+    
+    .error {
+      background: rgba(233, 69, 96, 0.2);
+      border: 1px solid var(--highlight);
+      color: var(--highlight);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px 30px;
+      color: #909090;
+    }
+    
+    .spinner {
+      border: 3px solid var(--border);
+      border-top: 3px solid var(--highlight);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    /* Custom Popup Styling */
+    .leaflet-popup-content-wrapper {
+      background: linear-gradient(135deg, rgba(22, 33, 62, 0.98), rgba(26, 26, 46, 0.98)) !important;
+      border: 2px solid #2196F3 !important;
+      border-radius: 12px !important;
+      color: var(--text) !important;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .leaflet-popup-content {
+      font-size: 13px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .popup-header {
+      background: linear-gradient(135deg, #2196F3, #1976D2);
+      color: white;
+      padding: 12px;
+      border-radius: 10px 10px 0 0;
+      font-weight: 700;
+      font-size: 14px;
+      border-bottom: 2px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .popup-body {
+      padding: 12px;
+    }
+
+    .popup-section {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+    }
+
+    .popup-section:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .popup-label {
+      font-size: 9px;
+      color: #909090;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .popup-value {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .popup-value.highlight {
+      color: #2196F3;
+      font-size: 13px;
+    }
+
+    .popup-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .popup-stat {
+      background: rgba(45, 53, 97, 0.5);
+      padding: 8px;
+      border-radius: 6px;
+      border-left: 3px solid #2196F3;
+    }
+
+    .popup-charging-box {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(76, 175, 80, 0.1));
+      border: 2px solid #2196F3;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .popup-charging-label {
+      font-size: 9px;
+      color: #2196F3;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .popup-charging-value {
+      font-size: 22px;
+      color: #2196F3;
+      font-weight: 800;
+    }
+
+    .popup-button {
+      width: 100%;
+      background: linear-gradient(135deg, #e94560, #ff6b9d);
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 8px;
+      transition: all 0.3s;
+    }
+
+    .popup-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(233, 69, 96, 0.3);
+    }
+
+    .leaflet-routing-container {
+      background: rgba(26, 26, 46, 0.95) !important;
+      border: 1px solid var(--border) !important;
+      color: var(--text) !important;
+    }
+
+    .leaflet-routing-alternatives-container {
+      background: rgba(26, 26, 46, 0.9) !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <div class="nav-bar">
+    <div class="logo">
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HoAFhAJ/wlseKgAAAABJRU5ErkJggg==" alt="BuzzBay" id="buzzbay-logo">
+    </div>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="#profile">Profile</a>
+      <a href="#logout">Logout</a>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Find Your Charger</h1>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="search-grid">
+        <div class="search-group">
+          <label>📍 Search Location</label>
+          <input type="text" id="search" placeholder="City, suburb, or address..." onkeypress="if(event.key==='Enter') filterChargers()">
+        </div>
+        <div class="search-group">
+          <label>🚗 Select Vehicle</label>
+          <select id="car-select">
+            <option value="tesla_m3">Tesla Model 3 (65 kWh)</option>
+            <option value="ev_small">Small EV (40 kWh)</option>
+            <option value="ev_large">Large EV (100 kWh)</option>
+          </select>
+        </div>
+        <div class="search-group">
+          <label>🔌 Status</label>
+          <select id="status-filter">
+            <option value="">All Chargers</option>
+            <option value="available">Available</option>
+            <option value="charging">Charging</option>
+          </select>
+        </div>
+        <button class="btn-search" onclick="filterChargers()">Search</button>
+      </div>
+      <div class="location-buttons">
+        <button class="btn-location" onclick="useMyLocation()">📍 Use My Location</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-layout">
+      <!-- Map -->
+      <div id="map"></div>
+
+      <!-- Charger List -->
+      <div class="charger-panel" id="charger-list">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Loading chargers...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Booking Modal -->
+  <div id="bookingModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 style="margin-bottom: 20px; color: var(--highlight);">Reserve Charger</h2>
+      
+      <div id="modal-message"></div>
+      
+      <div class="input-group">
+        <label>Charger</label>
+        <input type="text" id="charger-name" readonly style="background: rgba(45, 53, 97, 0.3);">
+      </div>
+      
+      <div class="input-group">
+        <label>Email Address</label>
+        <input type="email" id="email" required>
+      </div>
+      
+      <div class="input-group">
+        <label>Start Time</label>
+        <input type="datetime-local" id="start-time" required>
+      </div>
+      
+      <div class="input-group">
+        <label>End Time</label>
+        <input type="datetime-local" id="end-time" required>
+      </div>
+      
+      <div class="input-group">
+        <label>Target Charge Level (%)</label>
+        <input type="number" id="target-soc" value="80" min="20" max="100">
+      </div>
+
+      <div class="estimate-box">
+        <div class="estimate-row">
+          <span class="estimate-label">Charging Time</span>
+          <span class="estimate-value"><span id="charging-time">--</span> min</span>
+        </div>
+        <div class="estimate-row">
+          <span class="estimate-label">Estimated Cost</span>
+          <span class="estimate-value"><span id="estimated-cost">$0.00</span></span>
+        </div>
+      </div>
+      
+      <button onclick="confirmBooking()" class="btn-search" style="width: 100%;">
+        Confirm Booking
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3001/api';
+    let chargers = [];
+    let selectedCharger = null;
+    let map = null;
+    let markers = {};
+    let mapCentered = false;
+    let userLocation = null;
+    let routingControl = null;
+    
+    // West Footscray center
+    const WEST_FOOTSCRAY = [-37.8080, 144.8971];
+    
+    const CHARGER_LOCATIONS = {
+      'locationA': { lat: -37.8080, lng: 144.8971, name: 'Charging Station A', description: 'West Footscray Center' },
+      'locationB': { lat: -37.8120, lng: 144.9010, name: 'Charging Station B', description: 'Railway Station Area' },
+      'locationC': { lat: -37.8040, lng: 144.8930, name: 'Charging Station C', description: 'Car Park' }
+    };
+
+    const carProfiles = {
+      'tesla_m3': { capacity: 65, name: 'Tesla Model 3', defaultSOC: 20 },
+      'ev_small': { capacity: 40, name: 'Small EV', defaultSOC: 20 },
+      'ev_large': { capacity: 100, name: 'Large EV', defaultSOC: 20 }
+    };
+
+    const BASE_RATE = 0.243;
+
+    function initMap() {
+      map = L.map('map').setView(WEST_FOOTSCRAY, 15);
+      
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+          addUserLocationPin();
+        });
+      }
+    }
+
+    function addUserLocationPin() {
+      if (!userLocation || !map) return;
+      
+      const icon = L.divIcon({
+        html: `<div style="background: #e94560; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid white; animation: pulse 2s infinite;">📍</div>`,
+        iconSize: [40, 40],
+        className: 'user-location-icon'
+      });
+      
+      const marker = L.marker([userLocation.lat, userLocation.lng], { icon }).addTo(map);
+      marker.bindPopup('<div style="text-align: center;"><strong>Your Location</strong></div>');
+    }
+
+    function calculateChargingTime(chargerPower) {
+      const carType = document.getElementById('car-select').value;
+      const targetSOC = parseInt(document.getElementById('target-soc').value) || 80;
+      const car = carProfiles[carType];
+      const energyNeeded = (car.capacity * (targetSOC - car.defaultSOC)) / 100;
+      const chargingTime = Math.round((energyNeeded / chargerPower) * 60);
+      return chargingTime;
+    }
+
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLng/2) * Math.sin(dLng/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function calculateDrivingTime(distanceKm) {
+      const avgSpeed = 50; // km/h average speed
+      const timeMinutes = Math.round((distanceKm / avgSpeed) * 60);
+      return timeMinutes;
+    }
+
+    function showRoute(charger) {
+      if (!userLocation) return;
+
+      // Clear existing route
+      if (routingControl) {
+        map.removeControl(routingControl);
+      }
+
+      // Create new route
+      routingControl = L.Routing.control({
+        waypoints: [
+          L.latLng(userLocation.lat, userLocation.lng),
+          L.latLng(charger.lat, charger.lng)
+        ],
+        routeWhileDragging: false,
+        showAlternatives: false,
+        lineOptions: {
+          styles: [{ color: '#e94560', opacity: 0.8, weight: 5 }]
+        },
+        createMarker: () => null
+      }).addTo(map);
+
+      // Fit bounds
+      const group = new L.featureGroup([
+        L.latLng(userLocation.lat, userLocation.lng),
+        L.latLng(charger.lat, charger.lng)
+      ]);
+      map.fitBounds(group.getBounds().pad(0.1));
+    }
+
+    async function loadChargers() {
+      try {
+        const response = await fetch(`${API_URL}/chargers`);
+        const data = await response.json();
+        
+        if (data.success) {
+          chargers = data.data;
+          chargers.forEach(charger => {
+            const loc = CHARGER_LOCATIONS[charger.id];
+            if (loc) {
+              charger.lat = loc.lat;
+              charger.lng = loc.lng;
+              charger.description = loc.description;
+            }
+          });
+          
+          displayMap();
+          displayChargerList();
+        }
+      } catch (err) {
+        console.error('Load error:', err);
+      }
+    }
+
+    function displayMap() {
+      Object.values(markers).forEach(marker => marker.remove());
+      markers = {};
+      
+      chargers.forEach(charger => {
+        if (!charger.lat || !charger.lng) return;
+        
+        const state = charger.state || {};
+        const isOnline = state.status === 'online';
+        const chargingTime = calculateChargingTime(charger.maxPower);
+        
+        // Build popup HTML with beautiful styling
+        const popupHtml = `
+          <div style="width: 280px; background: transparent; border: none; padding: 0;">
+            <div class="popup-header">
+              ${charger.name}
+            </div>
+            <div class="popup-body">
+              <div class="popup-section">
+                <div class="popup-label">${charger.description}</div>
+              </div>
+
+              <div class="popup-charging-box">
+                <div class="popup-charging-label">Estimated Charge Time to 80%</div>
+                <div class="popup-charging-value">${chargingTime} min</div>
+              </div>
+
+              <div class="popup-stats-grid">
+                <div class="popup-stat">
+                  <div class="popup-label">Power</div>
+                  <div class="popup-value">${charger.maxPower}kW</div>
+                </div>
+                <div class="popup-stat">
+                  <div class="popup-label">Current</div>
+                  <div class="popup-value">${(state.current || 0).toFixed(1)}A</div>
+                </div>
+                <div class="popup-stat">
+                  <div class="popup-label">Temperature</div>
+                  <div class="popup-value">${(state.temperature || 0).toFixed(1)}°C</div>
+                </div>
+                <div class="popup-stat">
+                  <div class="popup-label">Status</div>
+                  <div class="popup-value" style="color: ${isOnline ? '#4CAF50' : '#e94560'};">
+                    ${isOnline ? '✓ Online' : '✕ Offline'}
+                  </div>
+                </div>
+              </div>
+
+              ${userLocation ? `
+                <div class="popup-section">
+                  <div class="popup-label">Distance & Time</div>
+                  <div class="popup-value" style="font-size: 12px;">
+                    ${calculateDistance(userLocation.lat, userLocation.lng, charger.lat, charger.lng).toFixed(1)}km • 
+                    ${calculateDrivingTime(calculateDistance(userLocation.lat, userLocation.lng, charger.lat, charger.lng))}min drive
+                  </div>
+                </div>
+              ` : ''}
+
+              <button onclick="openBooking('${charger.id}', '${charger.name}', ${charger.maxPower}); map.closePopup();" class="popup-button">
+                Book Now
+              </button>
+              
+              ${userLocation ? `
+                <button onclick="showRoute({lat: ${charger.lat}, lng: ${charger.lng}}); map.closePopup();" class="popup-button" style="background: linear-gradient(135deg, #2196F3, #1976D2); margin-top: 8px;">
+                  Show Route
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+        
+        const icon = L.divIcon({
+          html: `
+            <div style="position: relative; width: 50px; height: 50px;">
+              <div style="background: ${isOnline ? '#4CAF50' : '#e94560'}; color: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); border: 3px solid white;">⚡</div>
+              <div style="position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; white-space: nowrap; pointer-events: none;">Estimated: ${chargingTime}min</div>
+            </div>
+          `,
+          iconSize: [50, 50],
+          className: 'custom-icon'
+        });
+        
+        const marker = L.marker([charger.lat, charger.lng], { icon }).addTo(map);
+        marker.bindPopup(popupHtml, { maxWidth: 280, closeButton: false, closeOnClick: false, autoClose: false });
+        markers[charger.id] = marker;
+      });
+      
+      if (!mapCentered && Object.keys(markers).length > 0) {
+        const group = new L.featureGroup(Object.values(markers));
+        map.fitBounds(group.getBounds().pad(0.1));
+        mapCentered = true;
+      }
+    }
+
+    function displayChargerList() {
+      const container = document.getElementById('charger-list');
+      container.innerHTML = '';
+      
+      if (chargers.length === 0) {
+        container.innerHTML = '<div class="loading">No chargers available</div>';
+        return;
+      }
+      
+      chargers.forEach(charger => {
+        const state = charger.state || {};
+        const isOnline = state.status === 'online';
+        const isCharging = state.state === '0x03';
+        const isAvailable = isOnline && !isCharging;
+        const chargingTime = calculateChargingTime(charger.maxPower);
+        const distance = userLocation ? calculateDistance(userLocation.lat, userLocation.lng, charger.lat, charger.lng) : null;
+        const drivingTime = distance ? calculateDrivingTime(distance) : null;
+        
+        const item = document.createElement('div');
+        item.className = 'charger-card';
+        item.onclick = () => {
+          if (charger.lat && charger.lng) {
+            map.setView([charger.lat, charger.lng], 17);
+            if (markers[charger.id]) {
+              setTimeout(() => markers[charger.id].openPopup(), 300);
+            }
+          }
+        };
+        
+        const statsHtml = `
+          <div class="charger-stats">
+            <div class="stat">
+              <div class="stat-label">Power</div>
+              <div class="stat-value">${charger.maxPower}kW</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Current</div>
+              <div class="stat-value">${(state.current || 0).toFixed(1)}A</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Temp</div>
+              <div class="stat-value">${(state.temperature || 0).toFixed(1)}°C</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Signal</div>
+              <div class="stat-value">${(state.rssi || 0)}%</div>
+            </div>
+          </div>
+        `;
+        
+        item.innerHTML = `
+          <div class="charger-name">${charger.name}</div>
+          <div class="charger-location">${charger.description}</div>
+          
+          <span class="status-badge ${isOnline ? (isCharging ? 'status-charging' : 'status-online') : 'status-offline'}">
+            ${isCharging ? '⚡ Charging' : (isOnline ? '✓ Available' : '✕ Offline')}
+          </span>
+          
+          ${statsHtml}
+          
+          <div class="charging-time-box" id="charging-box-${charger.id}">
+            <div style="display: flex; align-items: center; justify-content: center;">
+              <div class="loading-spinner"></div>
+              <div>
+                <div class="label">Loading Stats</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="charger-price">$${(charger.maxPower * BASE_RATE).toFixed(2)}/hr</div>
+          
+          <button onclick="openBooking('${charger.id}', '${charger.name}', ${charger.maxPower}); event.stopPropagation();" 
+            class="btn-book" ${isAvailable ? '' : 'disabled'}>
+            ${isAvailable ? 'Reserve Now' : 'Unavailable'}
+          </button>
+          
+          ${userLocation && distance && drivingTime ? `
+            <button onclick="showRoute({lat: ${charger.lat}, lng: ${charger.lng}}); event.stopPropagation();" class="btn-navigate">
+              🗺️ Route (${distance.toFixed(1)}km • ${drivingTime}min)
+            </button>
+            <div class="distance-info">Driving: ${drivingTime}min</div>
+          ` : ''}
+        `;
+        container.appendChild(item);
+        
+        setTimeout(() => {
+          const box = document.getElementById(`charging-box-${charger.id}`);
+          if (box) {
+            box.classList.remove('loading');
+            box.innerHTML = `
+              <div class="label">Estimated Charge Time to 80%</div>
+              <div class="value">${chargingTime} min</div>
+            `;
+          }
+        }, 1500);
+      });
+    }
+
+    function filterChargers() {
+      const search = document.getElementById('search').value.toLowerCase().trim();
+      const status = document.getElementById('status-filter').value;
+      
+      if (!search && !status) {
+        displayChargerList();
+        return;
+      }
+      
+      const filtered = chargers.filter(c => {
+        const matchesSearch = !search || 
+          c.name.toLowerCase().includes(search) || 
+          c.description.toLowerCase().includes(search) ||
+          c.location.toLowerCase().includes(search);
+        
+        if (!status) return matchesSearch;
+        
+        const state = c.state || {};
+        const isOnline = state.status === 'online';
+        const isCharging = state.state === '0x03';
+        
+        if (status === 'available') return matchesSearch && isOnline && !isCharging;
+        if (status === 'charging') return matchesSearch && isCharging;
+        
+        return matchesSearch;
+      });
+      
+      const container = document.getElementById('charger-list');
+      container.innerHTML = '';
+      
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="loading">No chargers match your search</div>';
+        return;
+      }
+      
+      filtered.forEach(charger => {
+        const state = charger.state || {};
+        const isOnline = state.status === 'online';
+        const isCharging = state.state === '0x03';
+        const isAvailable = isOnline && !isCharging;
+        const chargingTime = calculateChargingTime(charger.maxPower);
+        const distance = userLocation ? calculateDistance(userLocation.lat, userLocation.lng, charger.lat, charger.lng) : null;
+        const drivingTime = distance ? calculateDrivingTime(distance) : null;
+        
+        const item = document.createElement('div');
+        item.className = 'charger-card';
+        item.onclick = () => {
+          if (charger.lat && charger.lng) {
+            map.setView([charger.lat, charger.lng], 17);
+            if (markers[charger.id]) {
+              setTimeout(() => markers[charger.id].openPopup(), 300);
+            }
+          }
+        };
+        
+        const statsHtml = `
+          <div class="charger-stats">
+            <div class="stat">
+              <div class="stat-label">Power</div>
+              <div class="stat-value">${charger.maxPower}kW</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Current</div>
+              <div class="stat-value">${(state.current || 0).toFixed(1)}A</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Temp</div>
+              <div class="stat-value">${(state.temperature || 0).toFixed(1)}°C</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Signal</div>
+              <div class="stat-value">${(state.rssi || 0)}%</div>
+            </div>
+          </div>
+        `;
+        
+        item.innerHTML = `
+          <div class="charger-name">${charger.name}</div>
+          <div class="charger-location">${charger.description}</div>
+          
+          <span class="status-badge ${isOnline ? (isCharging ? 'status-charging' : 'status-online') : 'status-offline'}">
+            ${isCharging ? '⚡ Charging' : (isOnline ? '✓ Available' : '✕ Offline')}
+          </span>
+          
+          ${statsHtml}
+          
+          <div class="charging-time-box" id="charging-box-${charger.id}">
+            <div style="display: flex; align-items: center; justify-content: center;">
+              <div class="loading-spinner"></div>
+              <div>
+                <div class="label">Loading Stats</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="charger-price">$${(charger.maxPower * BASE_RATE).toFixed(2)}/hr</div>
+          
+          <button onclick="openBooking('${charger.id}', '${charger.name}', ${charger.maxPower}); event.stopPropagation();" 
+            class="btn-book" ${isAvailable ? '' : 'disabled'}>
+            ${isAvailable ? 'Reserve Now' : 'Unavailable'}
+          </button>
+          
+          ${userLocation && distance && drivingTime ? `
+            <button onclick="showRoute({lat: ${charger.lat}, lng: ${charger.lng}}); event.stopPropagation();" class="btn-navigate">
+              🗺️ Route (${distance.toFixed(1)}km • ${drivingTime}min)
+            </button>
+            <div class="distance-info">Driving: ${drivingTime}min</div>
+          ` : ''}
+        `;
+        container.appendChild(item);
+        
+        setTimeout(() => {
+          const box = document.getElementById(`charging-box-${charger.id}`);
+          if (box) {
+            box.classList.remove('loading');
+            box.innerHTML = `
+              <div class="label">Estimated Charge Time to 80%</div>
+              <div class="value">${chargingTime} min</div>
+            `;
+          }
+        }, 1500);
+      });
+    }
+
+    function openBooking(chargerId, chargerName, maxPower) {
+      selectedCharger = { id: chargerId, name: chargerName, power: maxPower };
+      document.getElementById('charger-name').value = chargerName;
+      document.getElementById('bookingModal').style.display = 'block';
+      document.getElementById('modal-message').innerHTML = '';
+      
+      const now = new Date();
+      const start = new Date(now.getTime() + 5 * 60000);
+      const end = new Date(start.getTime() + 180 * 60000);
+      
+      document.getElementById('start-time').value = start.toISOString().slice(0, 16);
+      document.getElementById('end-time').value = end.toISOString().slice(0, 16);
+      
+      updateEstimate();
+    }
+
+    function closeModal() {
+      document.getElementById('bookingModal').style.display = 'none';
+    }
+
+    function updateEstimate() {
+      const startTime = new Date(document.getElementById('start-time').value);
+      const endTime = new Date(document.getElementById('end-time').value);
+      const targetSOC = parseInt(document.getElementById('target-soc').value);
+      const carType = document.getElementById('car-select').value;
+      
+      if (!selectedCharger || isNaN(startTime) || isNaN(endTime)) return;
+      
+      const car = carProfiles[carType];
+      const energyNeeded = (car.capacity * (targetSOC - car.defaultSOC)) / 100;
+      const chargingTime = Math.round((energyNeeded / selectedCharger.power) * 60);
+      const cost = (energyNeeded * BASE_RATE).toFixed(2);
+      
+      document.getElementById('charging-time').textContent = chargingTime;
+      document.getElementById('estimated-cost').textContent = '$' + cost;
+    }
+
+    document.getElementById('start-time').addEventListener('change', updateEstimate);
+    document.getElementById('end-time').addEventListener('change', updateEstimate);
+    document.getElementById('target-soc').addEventListener('change', updateEstimate);
+
+    async function confirmBooking() {
+      const email = document.getElementById('email').value;
+      const startTime = document.getElementById('start-time').value;
+      const endTime = document.getElementById('end-time').value;
+      const targetSOC = parseInt(document.getElementById('target-soc').value);
+      
+      if (!email || !startTime || !endTime) {
+        document.getElementById('modal-message').innerHTML = '<div class="error">❌ Please fill all fields</div>';
+        return;
+      }
+      
+      try {
+        const response = await fetch(`${API_URL}/bookings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: Math.floor(Math.random() * 10000),
+            locationId: selectedCharger.id,
+            startTime,
+            endTime,
+            targetSOC,
+            notes: `Email: ${email}`
+          })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          document.getElementById('modal-message').innerHTML = '<div class="success">✅ Booking confirmed!</div>';
+          setTimeout(() => {
+            closeModal();
+            loadChargers();
+          }, 2000);
+        } else {
+          document.getElementById('modal-message').innerHTML = `<div class="error">❌ ${data.error || 'Booking failed'}</div>`;
+        }
+      } catch (err) {
+        document.getElementById('modal-message').innerHTML = '<div class="error">❌ Booking failed</div>';
+      }
+    }
+
+    function useMyLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+          map.setView([userLocation.lat, userLocation.lng], 15);
+          addUserLocationPin();
+          displayChargerList();
+          document.getElementById('search').value = '';
+        });
+      }
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        50% { box-shadow: 0 4px 20px rgba(233, 69, 96, 0.5); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    initMap();
+    loadChargers();
+    setInterval(loadChargers, 5000);
+
+    // Load logo
+    document.addEventListener('DOMContentLoaded', () => {
+      const logoImg = document.getElementById('buzzbay-logo');
+      if (logoImg) {
+        logoImg.src = './buzzbay-logo.png';
+      }
+    });
+  </script>
+</body>
+</html>
