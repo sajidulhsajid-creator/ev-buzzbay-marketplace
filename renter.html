@@ -40,21 +40,21 @@
       bottom: 0;
       background-image: url('./buzzbay_backdrop.png');
       background-size: cover;
-      background-position: center top;
+      background-position: center 80%;
       background-repeat: no-repeat;
       background-attachment: fixed;
       pointer-events: none;
       z-index: 0;
       /* Fade out the bottom of the image so it doesn't end abruptly */
-      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 95%);
-      mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 95%);
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 75%, transparent 100%);
+      mask-image: linear-gradient(180deg, #000 0%, #000 75%, transparent 100%);
     }
     
     /* Mobile: disable parallax (causes performance issues on iOS) */
     @media (max-width: 768px) {
       body::before {
         background-attachment: scroll;
-        background-position: center top;
+        background-position: center 70%;
       }
     }
     
@@ -958,7 +958,7 @@
     const BASE_RATE = 0.243;
 
     function initMap() {
-      map = L.map('map').setView(WEST_FOOTSCRAY, 15);
+      map = L.map('map').setView(WEST_FOOTSCRAY, 13);
       
       L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '© OpenStreetMap contributors',
@@ -1183,7 +1183,7 @@
       
       if (!mapCentered && Object.keys(markers).length > 0) {
         const group = new L.featureGroup(Object.values(markers));
-        map.fitBounds(group.getBounds().pad(0.1));
+        map.fitBounds(group.getBounds().pad(0.3), { maxZoom: 13 });
         mapCentered = true;
       }
     }
@@ -1286,9 +1286,43 @@
       });
     }
 
+    async function geocodeAndPan(query) {
+      if (!query) return;
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        const results = await res.json();
+        if (results && results.length > 0) {
+          const lat = parseFloat(results[0].lat);
+          const lon = parseFloat(results[0].lon);
+          map.setView([lat, lon], 13);
+          // Drop a temporary marker for the searched location
+          if (window.searchMarker) map.removeLayer(window.searchMarker);
+          const searchIcon = L.divIcon({
+            html: `<div style="background: rgba(233, 69, 96, 0.85); border: 3px solid white; border-radius: 50%; width: 18px; height: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);"></div>`,
+            iconSize: [18, 18],
+            className: 'search-location-marker'
+          });
+          window.searchMarker = L.marker([lat, lon], { icon: searchIcon })
+            .addTo(map)
+            .bindPopup(`<div style="color: #1a1a2e; font-weight: 600; padding: 4px 8px;">${results[0].display_name.split(',').slice(0, 2).join(',')}</div>`)
+            .openPopup();
+        } else {
+          alert('Location not found. Try a different query.');
+        }
+      } catch (err) {
+        console.error('Geocode error:', err);
+      }
+    }
+
     function filterChargers() {
       const search = document.getElementById('search').value.toLowerCase().trim();
       const status = document.getElementById('status-filter').value;
+      
+      // If there's a search query, pan the map to that location (regardless of charger matches)
+      if (search) {
+        geocodeAndPan(document.getElementById('search').value.trim());
+      }
       
       if (!search && !status) {
         displayChargerList();
